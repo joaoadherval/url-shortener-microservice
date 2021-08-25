@@ -9,6 +9,14 @@ const port = process.env.PORT || 3000;
 
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
+const Schema = mongoose.Schema;
+
+const urlSchema = new Schema({
+  original_url: { type: String, required: true }
+});
+
+const Url = mongoose.model('Url', urlSchema);
+
 app.use(cors());
 
 app.use('/public', express.static(`${process.cwd()}/public`));
