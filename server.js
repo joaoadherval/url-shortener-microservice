@@ -67,3 +67,16 @@ app.post("/api/shorturl", bodyParser.urlencoded({ extended: false }) , function(
 
   res.json(response);
 });
+
+app.get("/api/shorturl/:urlid", function (req, res) {
+  let response = {};
+  let inputShort = req.params.urlid;
+
+  Url.findOne({short: inputShort}, function(error, result){
+    if(!error && result != undefined){
+      response.redirect(result.original_url);
+    } else {
+      response.json({ error: 'url not found' });
+    }
+  });
+});
