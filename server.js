@@ -4,6 +4,8 @@ const cors = require('cors');
 const app = express();
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const dns = require('dns');
+const validUrl = require('valid-url');
 const URL = require("url").URL;
 
 // Basic Configuration
@@ -44,49 +46,60 @@ app.post("/api/shorturl", bodyParser.urlencoded({ extended: false }) , function(
   let url = new URL(inputUrl);
 
   dns.lookup(url.hostname, function(error, address, family){
+    console.log("INFO: Validating url - " + inputUrl.toString());
     if(error) {
+      console.log("ERROR: Invalid URL - " + inputUrl.toString());
       res.json({error: 'invalid url'});
-      return;
+      return
     } else {
+      if(!validUrl.isWebUri(inputUrl)){
+        console.log("ERROR: Invalid URL - " + inputUrl.toString());
+        res.json({error: 'invalid url'});
+        return
+      }
+
+      console.log("INFO: URL validated - " + inputUrl.toString());
       response['original_url'] = inputUrl;
+
+      let inputShort = 1;
+
+      UrlModel.find({}).sort({short_url: 'desc'}).limit(1).exec(function(err, result){
+        if(result[0] == undefined){
+          console.log("INFO: Shortening URL - " + inputUrl.toString());
+          response['short_url'] = inputShort;
+        } else {
+          console.log("INFO: Shortening URL - " + inputUrl.toString());
+          inputShort = result[0].short_url + 1;
+          response['short_url'] = inputShort;
+        }
+
+        console.log("INFO: Saving URL - " + inputUrl.toString());
+        var newUrl = new UrlModel({
+          original_url: inputUrl,
+          short_url: inputShort
+        });
+
+        newUrl.save(function(err, data) {
+          if (err) {
+            return console.error(err);
+          }
+        });
+
+        console.log("INFO: Saved URL - " + inputUrl.toString());
+        res.json(response);
+      });
     }
   });
-
-  let inputShort = 1;
-
-  Url.findOne({})
-    .sort({ short_url: 'desc'})
-    .exec(function(error, result) {
-      if(!error && result != undefined){
-        inputShort = result.short + 1;
-      }
-      if(!error){
-        Url.findOneAndUpdate(
-          {original_url: inputUrl},
-          {original_url: inputUrl, short_url: inputShort},
-          {new: truw, upsert: true},
-          function(error, savedUrl) {
-            if(!error){
-              response['short_url'] = savedUrl.short;
-              response.json(response);
-            }
-          }
-        )
-      }
-    });
-
-  res.json(response);
 });
 
 app.get("/api/shorturl/:urlid", function (req, res) {
-  let response = {};
   let inputShort = req.params.urlid;
 
-  Url.findOne({short: inputShort}, function(error, result){
+  UrlModel.findOne({short_url: inputShort}, function(error, result){
     if(!error && result != undefined){
-      response.redirect(result.original_url);
+      res.redirect(result.original_url);
     } else {
-      response.json({ error: 'url not found' });
+      res.json({ error: 'url not found' });
     }
   });
 });
