@@ -4,6 +4,7 @@ const cors = require('cors');
 const app = express();
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const URL = require("url").URL;
 
 // Basic Configuration
 const port = process.env.PORT || 3000;
@@ -40,7 +41,16 @@ app.post("/api/shorturl", bodyParser.urlencoded({ extended: false }) , function(
   let response = {};
   inputUrl = req.body['url'];
 
-  response['original_url'] = inputUrl;
+  let url = new URL(inputUrl);
+
+  dns.lookup(url.hostname, function(error, address, family){
+    if(error) {
+      res.json({error: 'invalid url'});
+      return;
+    } else {
+      response['original_url'] = inputUrl;
+    }
+  });
 
   let inputShort = 1;
 
